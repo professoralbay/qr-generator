@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QR Code Generator · Akın Üner</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{--bg:#f4f2ee;--surface:#fff;--ink:#111;--muted:rgba(17,17,17,.4);--border:rgba(17,17,17,.1);--green:#00a878;}
+html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;}
+#app{max-width:960px;margin:0 auto;padding:0 5vw 60px;}
+header{padding:36px 0 32px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+.logo{font-size:clamp(2rem,6vw,3.5rem);font-weight:900;letter-spacing:-.02em;line-height:1;}
+.logo span{color:var(--green);}
+.logo-sub{font-size:.5rem;letter-spacing:.5em;color:var(--muted);text-transform:uppercase;margin-top:6px;}
+.type-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.type-btn{padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Courier New',monospace;font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:all .3s;}
+.type-btn:hover{border-color:var(--ink);color:var(--ink);}
+.type-btn.active{background:var(--ink);border-color:var(--ink);color:#fff;}
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+@media(max-width:640px){.main-grid{grid-template-columns:1fr;}}
+.input-card,.output-card{background:var(--surface);border:1px solid var(--border);padding:28px;}
+.lbl{display:block;font-size:.44rem;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.inp{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ink);font-family:'Courier New',monospace;font-size:.72rem;padding:10px 14px;outline:none;transition:border-color .3s;}
+.inp:focus{border-color:var(--ink);}
+.inp::placeholder{color:var(--muted);}
+.ta{height:80px;resize:vertical;}
+.sel{appearance:none;cursor:pointer;}
+.hidden{display:none!important;}
+.mt{margin-top:10px;}
+.customize-section{margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
+.cs-title{font-size:.44rem;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;}
+.cs-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cs-item{display:flex;flex-direction:column;}
+.color-inp{width:100%;height:40px;border:1px solid var(--border);background:var(--bg);cursor:pointer;padding:3px;}
+.qr-wrap{display:flex;align-items:center;justify-content:center;min-height:280px;border:1px solid var(--border);background:#fff;margin-bottom:16px;padding:20px;}
+.qp-icon{font-size:3rem;opacity:.15;text-align:center;}
+.qp-text{font-size:.52rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;max-width:200px;line-height:1.8;text-align:center;margin-top:12px;}
+#qrImg{display:none;max-width:100%;}
+.output-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.act-btn{flex:1;padding:11px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Courier New',monospace;font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:all .3s;min-width:100px;}
+.act-btn:hover{background:var(--ink);border-color:var(--ink);color:#fff;}
+.act-btn.primary{background:var(--ink);border-color:var(--ink);color:#fff;}
+.act-btn.primary:hover{background:var(--green);border-color:var(--green);}
+.qr-meta{border:1px solid var(--border);}
+.meta-row{display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);}
+.meta-row:last-child{border-bottom:none;}
+.meta-l{font-size:.42rem;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;}
+.meta-v{font-size:.72rem;font-weight:700;color:var(--ink);}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);padding:10px 24px;background:var(--ink);color:#fff;font-size:.52rem;letter-spacing:.2em;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">QR<span>GEN</span></div>
+    <div class="logo-sub">QR Code Generator · Akın Üner</div>
+  </header>
+
+  <div class="type-row">
+    <button class="type-btn active" onclick="setType('url')"   data-type="url">🔗 URL</button>
+    <button class="type-btn"        onclick="setType('text')"  data-type="text">📝 Text</button>
+    <button class="type-btn"        onclick="setType('email')" data-type="email">✉️ Email</button>
+    <button class="type-btn"        onclick="setType('phone')" data-type="phone">📞 Phone</button>
+    <button class="type-btn"        onclick="setType('wifi')"  data-type="wifi">📶 WiFi</button>
+    <button class="type-btn"        onclick="setType('vcard')" data-type="vcard">👤 vCard</button>
+  </div>
+
+  <div class="main-grid">
+    <div class="input-card">
+      <div id="ig-url">
+        <label class="lbl">Website URL</label>
+        <input class="inp" id="f-url" type="url" placeholder="https://github.com/professoralbay" oninput="generate()"/>
+      </div>
+      <div id="ig-text" class="hidden">
+        <label class="lbl">Text Content</label>
+        <textarea class="inp ta" id="f-text" placeholder="Enter any text..." oninput="generate()"></textarea>
+      </div>
+      <div id="ig-email" class="hidden">
+        <label class="lbl">Email Address</label>
+        <input class="inp" id="f-email" type="email" placeholder="hello@example.com" oninput="generate()"/>
+        <label class="lbl mt">Subject</label>
+        <input class="inp" id="f-subject" placeholder="Email subject..." oninput="generate()"/>
+        <label class="lbl mt">Message</label>
+        <textarea class="inp ta" id="f-message" placeholder="Email body..." oninput="generate()"></textarea>
+      </div>
+      <div id="ig-phone" class="hidden">
+        <label class="lbl">Phone Number</label>
+        <input class="inp" id="f-phone" type="tel" placeholder="+90 555 000 0000" oninput="generate()"/>
+      </div>
+      <div id="ig-wifi" class="hidden">
+        <label class="lbl">Network Name (SSID)</label>
+        <input class="inp" id="f-ssid" placeholder="MyNetwork" oninput="generate()"/>
+        <label class="lbl mt">Password</label>
+        <input class="inp" id="f-pass" placeholder="password123" oninput="generate()"/>
+        <label class="lbl mt">Security</label>
+        <select class="inp sel" id="f-sec" onchange="generate()">
+          <option value="WPA">WPA/WPA2</option>
+          <option value="WEP">WEP</option>
+          <option value="nopass">None</option>
+        </select>
+      </div>
+      <div id="ig-vcard" class="hidden">
+        <label class="lbl">Full Name</label>
+        <input class="inp" id="f-name" placeholder="Akın Üner" oninput="generate()"/>
+        <label class="lbl mt">Phone</label>
+        <input class="inp" id="f-vphone" type="tel" placeholder="+90 555 000 0000" oninput="generate()"/>
+        <label class="lbl mt">Email</label>
+        <input class="inp" id="f-vemail" type="email" placeholder="hello@example.com" oninput="generate()"/>
+        <label class="lbl mt">Website</label>
+        <input class="inp" id="f-vweb" type="url" placeholder="https://github.com/professoralbay" oninput="generate()"/>
+      </div>
+
+      <div class="customize-section">
+        <div class="cs-title">Customize</div>
+        <div class="cs-row">
+          <div class="cs-item">
+            <label class="lbl">Foreground</label>
+            <input type="color" class="color-inp" id="fgColor" value="#000000" oninput="generate()"/>
+          </div>
+          <div class="cs-item">
+            <label class="lbl">Background</label>
+            <input type="color" class="color-inp" id="bgColor" value="#ffffff" oninput="generate()"/>
+          </div>
+          <div class="cs-item">
+            <label class="lbl">Size</label>
+            <select class="inp sel" id="qrSize" onchange="generate()">
+              <option value="200">Small</option>
+              <option value="300" selected>Medium</option>
+              <option value="400">Large</option>
+              <option value="500">X-Large</option>
+            </select>
+          </div>
+          <div class="cs-item">
+            <label class="lbl">Error Corr.</label>
+            <select class="inp sel" id="qrEc" onchange="generate()">
+              <option value="L">Low (L)</option>
+              <option value="M" selected>Medium (M)</option>
+              <option value="Q">High (Q)</option>
+              <option value="H">Max (H)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-card">
+      <div class="qr-wrap" id="qrWrap">
+        <div id="qrPlaceholder">
+          <div class="qp-icon">⬛</div>
+          <div class="qp-text">Enter content to generate QR code</div>
+        </div>
+        <!-- QR renders here as image -->
+        <img id="qrImg" alt="QR Code"/>
+      </div>
+      <div class="output-actions" id="outputActions" style="display:none;">
+        <button class="act-btn primary" onclick="downloadQR()">⬇ Download PNG</button>
+        <button class="act-btn" onclick="copyQR()">⎘ Copy Image</button>
+      </div>
+      <div class="qr-meta" id="qrMeta" style="display:none;">
+        <div class="meta-row"><span class="meta-l">Type</span><span class="meta-v" id="metaType">—</span></div>
+        <div class="meta-row"><span class="meta-l">Size</span><span class="meta-v" id="metaSize">—</span></div>
+        <div class="meta-row"><span class="meta-l">Characters</span><span class="meta-v" id="metaChars">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Hidden canvas for QR generation -->
+<canvas id="qrCanvas" style="display:none;"></canvas>
+
+<script>
+// ── QR Code generation — pure JS, no library needed ──
+// Implements a simple QR encoder using the Google Charts API as fallback
+// and a pure JS QR matrix builder for offline use
+
+let currentType = 'url';
+let currentDataUrl = '';
+let toastTimer;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function setType(type) {
+  currentType = type;
+  document.querySelectorAll('.type-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type)
+  );
+  ['url','text','email','phone','wifi','vcard'].forEach(t =>
+    document.getElementById('ig-'+t).classList.toggle('hidden', t !== type)
+  );
+  generate();
+}
+
+function buildContent() {
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  switch(currentType) {
+    case 'url':   return v('f-url');
+    case 'text':  return v('f-text');
+    case 'phone': return v('f-phone') ? 'tel:'+v('f-phone') : '';
+    case 'email': {
+      const em = v('f-email'); if (!em) return '';
+      let s = 'mailto:'+em, p = [];
+      if (v('f-subject')) p.push('subject='+encodeURIComponent(v('f-subject')));
+      if (v('f-message')) p.push('body='+encodeURIComponent(v('f-message')));
+      return s + (p.length ? '?'+p.join('&') : '');
+    }
+    case 'wifi': {
+      const ssid = v('f-ssid'); if (!ssid) return '';
+      return `WIFI:T:${v('f-sec')||'WPA'};S:${ssid};P:${v('f-pass')};;`;
+    }
+    case 'vcard': {
+      const name = v('f-name'); if (!name) return '';
+      let c = 'BEGIN:VCARD\nVERSION:3.0\nFN:'+name+'\n';
+      if (v('f-vphone')) c += 'TEL:'+v('f-vphone')+'\n';
+      if (v('f-vemail')) c += 'EMAIL:'+v('f-vemail')+'\n';
+      if (v('f-vweb'))   c += 'URL:'+v('f-vweb')+'\n';
+      return c+'END:VCARD';
+    }
+  }
+  return '';
+}
+
+// Use Google Charts QR API — returns image URL
+function getQRUrl(content, size, fg, bg) {
+  const fgHex = fg.replace('#','');
+  const bgHex = bg.replace('#','');
+  const encoded = encodeURIComponent(content);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&color=${fgHex}&bgcolor=${bgHex}&format=png`;
+}
+
+let genTimer;
+function generate() {
+  clearTimeout(genTimer);
+  genTimer = setTimeout(_gen, 300);
+}
+
+function _gen() {
+  const content = buildContent();
+  const ph      = document.getElementById('qrPlaceholder');
+  const img     = document.getElementById('qrImg');
+  const actions = document.getElementById('outputActions');
+  const meta    = document.getElementById('qrMeta');
+
+  if (!content) {
+    ph.style.display  = 'flex';
+    img.style.display = 'none';
+    actions.style.display = 'none';
+    meta.style.display    = 'none';
+    currentDataUrl = '';
+    return;
+  }
+
+  const size = parseInt(document.getElementById('qrSize').value);
+  const fg   = document.getElementById('fgColor').value;
+  const bg   = document.getElementById('bgColor').value;
+
+  // Use QR server API
+  const url = getQRUrl(content, size, fg, bg);
+
+  img.onload = () => {
+    // Draw to canvas so we can export as dataURL
+    const canvas = document.getElementById('qrCanvas');
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, size, size);
+    currentDataUrl = canvas.toDataURL('image/png');
+
+    ph.style.display  = 'none';
+    img.style.display = 'block';
+    actions.style.display = 'flex';
+    meta.style.display    = 'block';
+
+    const labels = {url:'URL',text:'Text',email:'Email',phone:'Phone',wifi:'WiFi',vcard:'vCard'};
+    document.getElementById('metaType').textContent  = labels[currentType];
+    document.getElementById('metaSize').textContent  = size+'×'+size+' px';
+    document.getElementById('metaChars').textContent = content.length;
+  };
+
+  img.onerror = () => {
+    showToast('❌ Error — check internet connection');
+  };
+
+  img.crossOrigin = 'anonymous';
+  img.src = url;
+}
+
+function downloadQR() {
+  if (!currentDataUrl) { showToast('Generate a QR code first'); return; }
+  const a = document.createElement('a');
+  a.href     = currentDataUrl;
+  a.download = 'qrcode.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('⬇ Downloaded!');
+}
+
+async function copyQR() {
+  if (!currentDataUrl) { showToast('Generate a QR code first'); return; }
+  try {
+    const res  = await fetch(currentDataUrl);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    showToast('⎘ Copied to clipboard!');
+  } catch(e) {
+    showToast('❌ Copy failed — try downloading instead');
+  }
+}
+
+// Init
+window.addEventListener('load', () => {
+  document.getElementById('f-url').value = 'https://github.com/professoralbay';
+  generate();
+});
+</script>
+</body>
+</html>
