@@ -16,7 +16,7 @@
 
 ## 🎬 Demo
 
-![Demo](screenshot.gif)
+![Demo](https://github.com/professoralbay/qr-generator/blob/main/Animation%20(1).gif)
 
 ---
 
